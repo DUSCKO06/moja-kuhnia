@@ -769,10 +769,33 @@ add.addEventListener("click", () => {
       button.classList.toggle("active", button.dataset.page === page);
     });
   }
+navButtons.forEach(button => {
+  button.onclick = function () {
+    const page = this.dataset.page;
 
-  navButtons.forEach(button => {
-    button.addEventListener("click", () => showPage(button.dataset.page));
-  });
+    document.querySelectorAll(".app-page").forEach(section => {
+      section.hidden = true;
+    });
+
+    $("recipesPanel").hidden = true;
+
+    if (page === "home") {
+      $("homePage").hidden = false;
+    }
+
+    if (page === "plan") {
+      $("planPage").hidden = false;
+    }
+
+    if (page === "recipes" || page === "favorites") {
+      $("recipesPanel").hidden = false;
+    }
+
+    navButtons.forEach(btn => {
+      btn.classList.toggle("active", btn === this);
+    });
+  };
+});
 
   const homePage = document.createElement("section");
   homePage.className = "panel app-page";

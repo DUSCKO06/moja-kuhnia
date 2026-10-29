@@ -160,7 +160,8 @@ body {
 </nav>
 
 <main>
-  <section class="panel">
+  <section class="app-page" id="planPage" hidden>
+    <section class="panel">
     <h2>📅 Седмичен план</h2>
     <div class="weekbar">
       <button class="secondary" id="prevWeek">← Предишна</button>
@@ -171,7 +172,7 @@ body {
     <div id="weekGrid" class="weekgrid"></div>
     <p class="hint">Натисни „+ Добави“ в деня, в който искаш да планираш ястие. Данните се пазят в този браузър на това устройство.</p>
   </section>
-
+  </section>
   <section class="panel" id="addPanel" hidden>
     <h2 id="formTitle">Добави ястие</h2>
     <form id="mealForm">
@@ -383,15 +384,7 @@ add.addEventListener("click", () => {
     chooser.append(safeText("p", "Още нямаш запазени рецепти."));
   }
 
-  const newMeal = safeText("button", "＋ Въведи ново ястие", "secondary");
-  newMeal.type = "button";
-  newMeal.style.display = "block";
-  newMeal.style.marginTop = "10px";
-  newMeal.addEventListener("click", () => {
-    openForm(key);
-    $("mealDate").value = key;
-  });
-  chooser.append(newMeal);
+
 
   const cancel = safeText("button", "Отказ", "secondary");
   cancel.type = "button";
@@ -753,10 +746,51 @@ add.addEventListener("click", () => {
     document.getElementById("cancelRecipe").hidden = true;
   });
 
-  renderRecipes();
 
+  // Долна навигация
+  const navButtons = document.querySelectorAll(".app-nav button");
+
+  function showPage(page) {
+    document.querySelectorAll(".app-page").forEach(section => {
+      section.hidden = true;
+    });
+
+    $("recipesPanel").hidden = true;
+
+    if (page === "home") {
+      $("homePage").hidden = false;
+    } else if (page === "plan") {
+      $("planPage").hidden = false;
+    } else if (page === "recipes" || page === "favorites") {
+      $("recipesPanel").hidden = false;
+    }
+
+    navButtons.forEach(button => {
+      button.classList.toggle("active", button.dataset.page === page);
+    });
+  }
+
+  navButtons.forEach(button => {
+    button.addEventListener("click", () => showPage(button.dataset.page));
+  });
+
+  const homePage = document.createElement("section");
+  homePage.className = "panel app-page";
+  homePage.id = "homePage";
+  homePage.innerHTML = `
+    <h2>🏡 Добре дошла в Моята кухня!</h2>
+    <p>Тук можеш да съхраняваш любимите си рецепти и да планираш храненето за седмицата.</p>
+    <p>🍲 Рецепти — добавяй продукти, начин на приготвяне и снимки.</p>
+    <p>📅 План — избирай запазени рецепти за всеки ден.</p>
+    <p>💚 Любими — събирай рецептите, които харесваш най-много.</p>
+  `;
+  document.querySelector("main").prepend(homePage);
+
+  renderRecipes();
   render();
+  showPage("home");
 })();
+
 </script>
 </body>
 </html>

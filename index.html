@@ -157,7 +157,49 @@ footer { text-align: center; padding: 20px; color: #6e7366; }
     <p class="hint">Копирането добавя ястията от предишната седмица към текущата, без да премахва вече записаните.</p>
   </section>
 </main>
-<footer>Моята кухня · Твоят личен кулинарен помощник</footer>
+
+<section class="panel" id="recipesPanel">
+  <h2>📖 Моите рецепти</h2>
+  <input
+    id="recipeSearch"
+    type="search"
+    placeholder="🔍 Търси рецепта..."
+    style="width:100%;margin-bottom:12px;border:1px solid #cbcdbf"
+  >
+
+  <form id="recipeForm" style="display:grid;gap:10px;margin-bottom:20px">
+    <h3 id="recipeFormTitle">Добави нова рецепта</h3>
+
+    <label>Име на рецептата
+      <input id="recipeName" required maxlength="100"
+        placeholder="Например: Домашна мусака">
+    </label>
+
+    <label>Снимка на ястието
+      <input id="recipePhoto" type="file" accept="image/*">
+    </label>
+
+    <label>Продукти и количества
+      <textarea id="recipeIngredients" required rows="4"
+        placeholder="Картофи – 1 кг&#10;Кайма – 500 г&#10;Лук – 1 глава"></textarea>
+    </label>
+
+    <label>Начин на приготвяне
+      <textarea id="recipeSteps" required rows="5"
+        placeholder="1. Подготви продуктите...&#10;2. Сготви ястието..."></textarea>
+    </label>
+
+    <button type="submit">Запази рецептата</button>
+    <button type="button" class="secondary" id="cancelRecipe" hidden>
+      Отказ
+    </button>
+  </form>
+
+  <div id="recipeList" class="weekgrid"></div>
+  <p class="hint">Рецептите се запазват в този браузър на това устройство.</p>
+</section>
+
+  <footer>Моята кухня · Твоят личен кулинарен помощник</footer>
 
 <script>
 (function () {
@@ -370,6 +412,254 @@ footer { text-align: center; padding: 20px; color: #6e7366; }
     a.click();
     URL.revokeObjectURL(url);
   });
+
+  
+  // ===== Моите рецепти =====
+  const recipeStorageKey = "moja-kuhnia-recipes-v1";
+  let recipes = [];
+  let editingRecipeId = null;
+
+  try {
+    const storedRecipes = JSON.parse(
+      localStorage.getItem(recipeStorageKey) || "[]"
+    );
+    if (Array.isArray(storedRecipes)) recipes = storedRecipes;
+  } catch (e) {
+    recipes = [];
+  }
+
+  function saveRecipes() {
+    try {
+      localStorage.setItem(recipeStorageKey, JSON.stringify(recipes));
+      return true;
+    } catch (e) {
+      alert("Не успях да запазя рецептата. Опитай със снимка с по-малък размер.");
+      return false;
+    }
+  }
+
+  function renderRecipes() {
+    const list = document.getElementById("recipeList");
+    const search = document.getElementById("recipeSearch");
+    if (!list || !search) return;
+
+    list.replaceChildren();
+    const query = search.value.trim().toLocaleLowerCase("bg");
+    const visible = recipes.filter(recipe =>
+      recipe.name.toLocaleLowerCase("bg").includes(query)
+    );
+
+    if (!visible.length) {
+      const message = document.createElement("p");
+      message.textContent = recipes.length
+        ? "Няма намерени рецепти."
+        : "Тук ще се показват твоите рецепти. Добави първата си рецепта от формуляра.";
+      list.append(message);
+      return;
+    }
+
+    visible.forEach(recipe => {
+      const card = document.createElement("article");
+      card.className = "day";
+
+      if (recipe.photo) {
+        const image = document.createElement("img");
+        image.src = recipe.photo;
+        image.alt = recipe.name;
+        image.style.width = "100%";
+        image.style.aspectRatio = "4 / 3";
+        image.style.objectFit = "cover";
+        image.style.borderRadius = "9px";
+        card.append(image);
+      }
+
+      const title = document.createElement("h3");
+      title.textContent = recipe.name;
+      card.append(title);
+
+      const favorite = document.createElement("button");
+      favorite.className = "secondary";
+      favorite.type = "button";
+      favorite.textContent = recipe.favorite ? "★ Любима" : "☆ Добави в любими";
+      favorite.style.marginTop = "8px";
+      favorite.addEventListener("click", () => {
+        recipe.favorite = !recipe.favorite;
+        if (saveRecipes()) renderRecipes();
+      });
+      card.append(favorite);
+
+      const details = document.createElement("details");
+      details.style.marginTop = "10px";
+
+      const summary = document.createElement("summary");
+      summary.textContent = "Продукти и приготвяне";
+      details.append(summary);
+
+      const ingredientsHeading = document.createElement("h4");
+      ingredientsHeading.textContent = "Продукти";
+      details.append(ingredientsHeading);
+
+      const ingredients = document.createElement("p");
+      ingredients.style.whiteSpace = "pre-wrap";
+      ingredients.textContent = recipe.ingredients;
+      details.append(ingredients);
+
+      const stepsHeading = document.createElement("h4");
+      stepsHeading.textContent = "Начин на приготвяне";
+      details.append(stepsHeading);
+
+      const steps = document.createElement("p");
+      steps.style.whiteSpace = "pre-wrap";
+      steps.textContent = recipe.steps;
+      details.append(steps);
+      card.append(details);
+
+      const actions = document.createElement("div");
+      actions.className = "actions";
+      actions.style.marginTop = "10px";
+
+      const addToPlan = document.createElement("button");
+      addToPlan.type = "button";
+      addToPlan.textContent = "📅 Към плана";
+      addToPlan.addEventListener("click", () => {
+        const date = prompt(
+          "За кой ден? Въведи дата във формат ГГГГ-ММ-ДД",
+          dateKey(new Date())
+        );
+        if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+          if (date) alert("Моля, въведи датата във формат ГГГГ-ММ-ДД.");
+          return;
+        }
+        meals.push({
+          id: (window.crypto && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : String(Date.now()) + Math.random().toString(16).slice(2),
+          date,
+          name: recipe.name,
+          note: "От Моите рецепти"
+        });
+        if (save()) {
+          weekStart = mondayOf(parseDate(date));
+          render();
+          alert("Рецептата е добавена към седмичния план.");
+        }
+      });
+      actions.append(addToPlan);
+
+      const edit = document.createElement("button");
+      edit.type = "button";
+      edit.className = "secondary";
+      edit.textContent = "Редактирай";
+      edit.addEventListener("click", () => {
+        editingRecipeId = recipe.id;
+        document.getElementById("recipeFormTitle").textContent = "Редактирай рецепта";
+        document.getElementById("recipeName").value = recipe.name;
+        document.getElementById("recipeIngredients").value = recipe.ingredients;
+        document.getElementById("recipeSteps").value = recipe.steps;
+        document.getElementById("recipePhoto").value = "";
+        document.getElementById("cancelRecipe").hidden = false;
+        document.getElementById("recipeForm").scrollIntoView({ behavior: "smooth" });
+      });
+      actions.append(edit);
+
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "delete";
+      remove.textContent = "Изтрий";
+      remove.addEventListener("click", () => {
+        if (confirm(`Да изтрия ли рецептата „${recipe.name}“?`)) {
+          recipes = recipes.filter(item => item.id !== recipe.id);
+          if (saveRecipes()) renderRecipes();
+        }
+      });
+      actions.append(remove);
+
+      card.append(actions);
+      list.append(card);
+    });
+  }
+
+  document.getElementById("recipeSearch").addEventListener(
+    "input", renderRecipes
+  );
+
+  document.getElementById("recipeForm").addEventListener("submit", async event => {
+    event.preventDefault();
+
+    const name = document.getElementById("recipeName").value.trim();
+    const ingredients = document.getElementById("recipeIngredients").value.trim();
+    const steps = document.getElementById("recipeSteps").value.trim();
+    const photoInput = document.getElementById("recipePhoto");
+    const file = photoInput.files[0];
+
+    if (!name || !ingredients || !steps) {
+      alert("Попълни името, продуктите и начина на приготвяне.");
+      return;
+    }
+
+    let photo = "";
+    if (file) {
+      if (!file.type.startsWith("image/")) {
+        alert("Моля, избери файл със снимка.");
+        return;
+      }
+      if (file.size > 700 * 1024) {
+        alert("Избери снимка до 700 KB, за да се запази в браузъра.");
+        return;
+      }
+      try {
+        photo = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      } catch (e) {
+        alert("Не успях да прочета снимката.");
+        return;
+      }
+    }
+
+    const existing = editingRecipeId
+      ? recipes.find(recipe => recipe.id === editingRecipeId)
+      : null;
+
+    const recipe = {
+      id: existing ? existing.id :
+        ((window.crypto && crypto.randomUUID)
+          ? crypto.randomUUID()
+          : String(Date.now()) + Math.random().toString(16).slice(2)),
+      name,
+      ingredients,
+      steps,
+      photo: photo || (existing ? existing.photo : ""),
+      favorite: existing ? existing.favorite : false
+    };
+
+    if (existing) {
+      recipes = recipes.map(item => item.id === existing.id ? recipe : item);
+    } else {
+      recipes.unshift(recipe);
+    }
+
+    if (saveRecipes()) {
+      document.getElementById("recipeForm").reset();
+      document.getElementById("recipeFormTitle").textContent = "Добави нова рецепта";
+      document.getElementById("cancelRecipe").hidden = true;
+      editingRecipeId = null;
+      renderRecipes();
+      alert("Рецептата е запазена!");
+    }
+  });
+
+  document.getElementById("cancelRecipe").addEventListener("click", () => {
+    editingRecipeId = null;
+    document.getElementById("recipeForm").reset();
+    document.getElementById("recipeFormTitle").textContent = "Добави нова рецепта";
+    document.getElementById("cancelRecipe").hidden = true;
+  });
+
+  renderRecipes();
 
   render();
 })();

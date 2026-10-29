@@ -307,7 +307,46 @@ footer { text-align: center; padding: 20px; color: #6e7366; }
 
       const add = safeText("button", "+ Добави", "add");
       add.type = "button";
-      add.addEventListener("click", () => openForm(key));
+   add.addEventListener("click", () => {
+  if (!recipes.length) {
+    openForm(key);
+    return;
+  }
+
+  const choice = prompt(
+    "Напиши името на съществуваща рецепта:\n" +
+    recipes.map(recipe => recipe.name).join("\n") +
+    "\n\nОстави празно, ако искаш да въведеш ново ястие."
+  );
+
+  if (choice === null) return;
+
+  if (choice.trim() === "") {
+    openForm(key);
+    $("mealDate").value = key;
+    return;
+  }
+
+  const selected = recipes.find(
+    recipe => recipe.name.toLocaleLowerCase("bg") === choice.trim().toLocaleLowerCase("bg")
+  );
+
+  if (!selected) {
+    alert("Не намерих такава рецепта. Провери името и опитай отново.");
+    return;
+  }
+
+  meals.push({
+    id: (window.crypto && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : String(Date.now()) + Math.random().toString(16).slice(2),
+    date: key,
+    name: selected.name,
+    note: "От Моите рецепти"
+  });
+
+  if (save()) render();
+});
       day.append(add);
       grid.append(day);
     }

@@ -750,20 +750,34 @@ add.addEventListener("click", () => {
   // Долна навигация
   const navButtons = document.querySelectorAll(".app-nav button");
 
-  function showPage(page) {
-    document.querySelectorAll(".app-page").forEach(section => {
-      section.hidden = true;
-    });
+ 
+function showPage(page) {
+  const home = document.getElementById("homePage");
+  const plan = document.getElementById("planPage");
+  const recipesPanel = document.getElementById("recipesPanel");
+  const addPanel = document.getElementById("addPanel");
 
-    $("recipesPanel").hidden = true;
+  if (!home || !plan || !recipesPanel) {
+    alert("Липсва секция на страница. Трябва да проверим HTML кода.");
+    return;
+  }
 
-    if (page === "home") {
-      $("homePage").hidden = false;
-    } else if (page === "plan") {
-      $("planPage").hidden = false;
-    } else if (page === "recipes" || page === "favorites") {
-      $("recipesPanel").hidden = false;
-    }
+  home.hidden = page !== "home";
+  plan.hidden = page !== "plan";
+  recipesPanel.hidden = page !== "recipes" && page !== "favorites";
+
+  if (addPanel) addPanel.hidden = true;
+
+  document.querySelectorAll(".app-nav button").forEach(button => {
+    button.classList.toggle("active", button.dataset.page === page);
+  });
+
+  if (page === "recipes" || page === "favorites") {
+    renderRecipes();
+  }
+
+  window.scrollTo(0, 0);
+}
 
     navButtons.forEach(button => {
       button.classList.toggle("active", button.dataset.page === page);

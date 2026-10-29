@@ -108,6 +108,42 @@ footer { text-align: center; padding: 20px; color: #6e7366; }
   .day h3 { font-size: 16px; }
   .meal { font-size: 14px; }
 }
+
+/* Долна навигация */
+.app-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 8px 6px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  background: #ffffff;
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.06);
+}
+
+.app-nav button {
+  padding: 10px 2px;
+  background: transparent;
+  color: var(--dark);
+  font-size: 12px;
+  border-radius: 10px;
+}
+
+.app-nav button.active {
+  background: #e8eddf;
+  color: var(--green);
+  font-weight: 700;
+}
+
+body {
+  padding-bottom: 85px;
+}
+
 </style>
 </head>
 <body>
@@ -115,6 +151,13 @@ footer { text-align: center; padding: 20px; color: #6e7366; }
   <h1>🥗 Моята кухня</h1>
   <p>Моите рецепти, моят план, моят дом.</p>
 </header>
+
+<nav class="app-nav" aria-label="Основна навигация">
+  <button type="button" class="active" data-page="home">🏡 Начало</button>
+  <button type="button" data-page="plan">📅 План</button>
+  <button type="button" data-page="recipes">🍲 Рецепти</button>
+  <button type="button" data-page="favorites">💚 Любими</button>
+</nav>
 
 <main>
   <section class="panel">

@@ -2,97 +2,377 @@
 <!DOCTYPE html>
 <html lang="bg">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#647653">
-  <title>Моята кухня</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: system-ui, sans-serif;
-      background: #f7f5ef;
-      color: #30372a;
-    }
-    header {
-      background: #647653;
-      color: white;
-      padding: 28px 20px;
-      text-align: center;
-    }
-    header h1 { margin: 0 0 8px; }
-    main {
-      max-width: 760px;
-      margin: 24px auto;
-      padding: 0 16px;
-    }
-    .welcome, .section {
-      background: white;
-      border-radius: 16px;
-      padding: 20px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 10px #00000008;
-    }
-    .tiles {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
-    }
-    .tile {
-      background: #fff;
-      padding: 20px 12px;
-      border-radius: 14px;
-      text-align: center;
-      border: 1px solid #e5e4da;
-    }
-    .emoji { font-size: 30px; }
-    h2 { font-size: 19px; }
-    p { line-height: 1.5; }
-    footer {
-      text-align: center;
-      padding: 20px;
-      color: #6e7366;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#647653">
+<title>Моята кухня</title>
+<style>
+:root {
+  --green: #647653;
+  --dark: #30372a;
+  --cream: #f7f5ef;
+  --border: #e5e4da;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--cream);
+  color: var(--dark);
+  font-family: system-ui, sans-serif;
+}
+header {
+  background: var(--green);
+  color: white;
+  text-align: center;
+  padding: 22px 16px;
+}
+header h1 { margin: 0 0 5px; }
+header p { margin: 0; }
+main { max-width: 1000px; margin: auto; padding: 20px 14px; }
+.panel {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+h2 { font-size: 20px; margin: 0 0 14px; }
+button, input {
+  font: inherit;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+button {
+  cursor: pointer;
+  border: 0;
+  background: var(--green);
+  color: white;
+}
+button.secondary {
+  background: #eeeee7;
+  color: var(--dark);
+}
+button.delete {
+  background: #f8e9e5;
+  color: #8d3328;
+}
+button:focus-visible, input:focus-visible {
+  outline: 3px solid #a9bd8f;
+  outline-offset: 2px;
+}
+.weekbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+#weekLabel { font-weight: 650; }
+.weekgrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+.day {
+  min-width: 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 8px;
+}
+.day.today { border: 2px solid var(--green); }
+.day h3 { font-size: 14px; margin: 0 0 3px; }
+.date { font-size: 12px; color: #727668; margin-bottom: 10px; }
+.meal {
+  background: #f1f3eb;
+  border-radius: 8px;
+  padding: 8px;
+  margin: 7px 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.meal small { display: block; color: #626957; margin-bottom: 3px; }
+.meal button { margin-top: 6px; padding: 5px 7px; font-size: 12px; }
+.add { width: 100%; margin-top: 8px; }
+#mealForm { display: grid; gap: 10px; }
+#mealForm label { display: grid; gap: 5px; font-size: 14px; }
+#mealForm input { border: 1px solid #cbcdbf; width: 100%; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.hint { color: #6e7366; font-size: 13px; line-height: 1.5; }
+footer { text-align: center; padding: 20px; color: #6e7366; }
+@media (max-width: 700px) {
+  main { padding: 12px 8px; }
+  .weekgrid { grid-template-columns: 1fr; }
+  .day { padding: 12px; }
+  .day h3 { font-size: 16px; }
+  .meal { font-size: 14px; }
+}
+</style>
 </head>
 <body>
-  <header>
-    <h1>🥗 Моята кухня</h1>
-    <p>Моите рецепти, моят план, моят дом.</p>
-  </header>
+<header>
+  <h1>🥗 Моята кухня</h1>
+  <p>Моите рецепти, моят план, моят дом.</p>
+</header>
 
-  <main>
-    <section class="welcome">
-      <h2>Добре дошла в твоята кухня!</h2>
-      <p>Тук ще събираш любимите си рецепти,
-      ще планираш седмицата и ще подготвяш
-      списъка си за пазаруване.</p>
-    </section>
+<main>
+  <section class="panel">
+    <h2>📅 Седмичен план</h2>
+    <div class="weekbar">
+      <button class="secondary" id="prevWeek">← Предишна</button>
+      <span id="weekLabel" aria-live="polite"></span>
+      <button class="secondary" id="nextWeek">Следваща →</button>
+      <button class="secondary" id="thisWeek">Тази седмица</button>
+    </div>
+    <div id="weekGrid" class="weekgrid"></div>
+    <p class="hint">Натисни „+ Добави“ в деня, в който искаш да планираш ястие. Данните се пазят в този браузър на това устройство.</p>
+  </section>
 
-    <section class="tiles">
-      <div class="tile">
-        <div class="emoji">📅</div>
-        <h2>Седмичен план</h2>
-        <p>Организирай седмицата си.</p>
+  <section class="panel" id="addPanel" hidden>
+    <h2 id="formTitle">Добави ястие</h2>
+    <form id="mealForm">
+      <label>Ден
+        <input type="date" id="mealDate" required>
+      </label>
+      <label>Име на ястието или събитието
+        <input id="mealName" maxlength="120" placeholder="Например: Печени зеленчуци" required>
+      </label>
+      <label>Бележка (по желание)
+        <input id="mealNote" maxlength="250" placeholder="Например: да купя тиквички">
+      </label>
+      <div class="actions">
+        <button type="submit">Запази</button>
+        <button type="button" class="secondary" id="cancelAdd">Отказ</button>
       </div>
-      <div class="tile">
-        <div class="emoji">📖</div>
-        <h2>Моите рецепти</h2>
-        <p>Съхранявай любимите си ястия.</p>
-      </div>
-      <div class="tile">
-        <div class="emoji">🛒</div>
-        <h2>Пазаруване</h2>
-        <p>Подготви продуктите си.</p>
-      </div>
-      <div class="tile">
-        <div class="emoji">⭐</div>
-        <h2>Любими</h2>
-        <p>Намери лесно любимите ястия.</p>
-      </div>
-    </section>
-  </main>
+    </form>
+  </section>
 
-  <footer>Моята кухня · Личен кулинарен помощник</footer>
+  <section class="panel">
+    <h2>🧺 План за седмицата</h2>
+    <div class="actions">
+      <button class="secondary" id="copyWeek">Копирай предишната седмица</button>
+      <button class="secondary" id="exportData">Изтегли резервно копие</button>
+    </div>
+    <p class="hint">Копирането добавя ястията от предишната седмица към текущата, без да премахва вече записаните.</p>
+  </section>
+</main>
+<footer>Моята кухня · Твоят личен кулинарен помощник</footer>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const storageKey = "moja-kuhnia-meals-v1";
+  let meals = [];
+  let weekStart = mondayOf(new Date());
+  let editingId = null;
+
+  try {
+    const saved = JSON.parse(localStorage.getItem(storageKey) || "[]");
+    if (Array.isArray(saved)) meals = saved;
+  } catch (e) {
+    meals = [];
+  }
+
+  function dateKey(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  function parseDate(key) {
+    const parts = key.split("-").map(Number);
+    return new Date(parts[0], parts[1] - 1, parts[2], 12);
+  }
+
+  function addDays(date, amount) {
+    const result = new Date(date);
+    result.setDate(result.getDate() + amount);
+    return result;
+  }
+
+  function mondayOf(date) {
+    const result = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12);
+    const day = (result.getDay() + 6) % 7;
+    result.setDate(result.getDate() - day);
+    return result;
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(meals));
+      return true;
+    } catch (e) {
+      alert("Не успях да запазя данните. Провери свободното място в браузъра.");
+      return false;
+    }
+  }
+
+  function formatDate(date) {
+    return date.toLocaleDateString("bg-BG", {
+      day: "numeric", month: "short"
+    });
+  }
+
+  function safeText(tag, text, className) {
+    const el = document.createElement(tag);
+    el.textContent = text;
+    if (className) el.className = className;
+    return el;
+  }
+
+  function render() {
+    const last = addDays(weekStart, 6);
+    $("weekLabel").textContent =
+      `${formatDate(weekStart)} – ${formatDate(last)} ${last.getFullYear()}`;
+
+    const grid = $("weekGrid");
+    grid.replaceChildren();
+
+    const names = [
+      "Понеделник", "Вторник", "Сряда", "Четвъртък",
+      "Петък", "Събота", "Неделя"
+    ];
+    const today = dateKey(new Date());
+
+    for (let i = 0; i < 7; i++) {
+      const date = addDays(weekStart, i);
+      const key = dateKey(date);
+      const day = safeText("article", "", "day");
+      if (key === today) day.classList.add("today");
+
+      const heading = safeText("h3", names[i]);
+      const dateText = safeText("div", formatDate(date), "date");
+      day.append(heading, dateText);
+
+      meals.filter(m => m.date === key).forEach(meal => {
+        const card = safeText("div", "", "meal");
+        if (meal.note) card.append(safeText("small", meal.note));
+        card.append(safeText("div", meal.name));
+
+        const remove = safeText("button", "Изтрий", "delete");
+        remove.type = "button";
+        remove.addEventListener("click", () => {
+          if (confirm(`Да изтрия ли „${meal.name}“?`)) {
+            meals = meals.filter(m => m.id !== meal.id);
+            if (save()) render();
+          }
+        });
+        card.append(remove);
+        day.append(card);
+      });
+
+      const add = safeText("button", "+ Добави", "add");
+      add.type = "button";
+      add.addEventListener("click", () => openForm(key));
+      day.append(add);
+      grid.append(day);
+    }
+  }
+
+  function openForm(date, meal) {
+    editingId = meal ? meal.id : null;
+    $("formTitle").textContent = meal ? "Редактирай запис" : "Добави ястие или събитие";
+    $("mealDate").value = date;
+    $("mealName").value = meal ? meal.name : "";
+    $("mealNote").value = meal ? meal.note : "";
+    $("addPanel").hidden = false;
+    $("addPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+    $("mealName").focus();
+  }
+
+  $("mealForm").addEventListener("submit", event => {
+    event.preventDefault();
+    const date = $("mealDate").value;
+    const name = $("mealName").value.trim();
+    const note = $("mealNote").value.trim();
+    if (!date || !name) return;
+
+    if (editingId) {
+      const item = meals.find(m => m.id === editingId);
+      if (item) Object.assign(item, { date, name, note });
+    } else {
+      meals.push({
+        id: (window.crypto && crypto.randomUUID)
+          ? crypto.randomUUID()
+          : String(Date.now()) + Math.random().toString(16).slice(2),
+        date, name, note
+      });
+    }
+
+    if (save()) {
+      weekStart = mondayOf(parseDate(date));
+      $("addPanel").hidden = true;
+      $("mealForm").reset();
+      editingId = null;
+      render();
+    }
+  });
+
+  $("cancelAdd").addEventListener("click", () => {
+    $("addPanel").hidden = true;
+    editingId = null;
+  });
+
+  $("prevWeek").addEventListener("click", () => {
+    weekStart = addDays(weekStart, -7);
+    render();
+  });
+
+  $("nextWeek").addEventListener("click", () => {
+    weekStart = addDays(weekStart, 7);
+    render();
+  });
+
+  $("thisWeek").addEventListener("click", () => {
+    weekStart = mondayOf(new Date());
+    render();
+  });
+
+  $("copyWeek").addEventListener("click", () => {
+    const sourceStart = addDays(weekStart, -7);
+    const sourceKeys = Array.from({ length: 7 }, (_, i) =>
+      dateKey(addDays(sourceStart, i))
+    );
+    const previousMeals = meals.filter(m => sourceKeys.includes(m.date));
+
+    if (!previousMeals.length) {
+      alert("В предишната седмица няма записи за копиране.");
+      return;
+    }
+
+    if (!confirm(`Да копирам ли ${previousMeals.length} записа от предишната седмица?`)) return;
+
+    previousMeals.forEach(m => {
+      const newDate = dateKey(addDays(parseDate(m.date), 7));
+      meals.push({
+        ...m,
+        id: (window.crypto && crypto.randomUUID)
+          ? crypto.randomUUID()
+          : String(Date.now()) + Math.random().toString(16).slice(2),
+        date: newDate
+      });
+    });
+
+    if (save()) render();
+  });
+
+  $("exportData").addEventListener("click", () => {
+    const blob = new Blob(
+      [JSON.stringify({ meals }, null, 2)],
+      { type: "application/json;charset=utf-8" }
+    );
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "moja-kuhnia-rezervno-kopie.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  render();
+})();
+</script>
 </body>
 </html>

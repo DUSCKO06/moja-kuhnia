@@ -382,19 +382,6 @@ add.addEventListener("click", () => {
     }
   }
 
-
-
-    if (save()) {
-      weekStart = mondayOf(parseDate(date));
-      $("addPanel").hidden = true;
-      $("mealForm").reset();
-      editingId = null;
-      render();
-    }
-  });
-
-
-
   $("prevWeek").addEventListener("click", () => {
     weekStart = addDays(weekStart, -7);
     render();

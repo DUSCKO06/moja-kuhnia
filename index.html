@@ -173,24 +173,6 @@ body {
     <p class="hint">Натисни „+ Добави“ в деня, в който искаш да планираш ястие. Данните се пазят в този браузър на това устройство.</p>
   </section>
   </section>
-  <section class="panel" id="addPanel" hidden>
-    <h2 id="formTitle">Добави ястие</h2>
-    <form id="mealForm">
-      <label>Ден
-        <input type="date" id="mealDate" required>
-      </label>
-      <label>Име на ястието или събитието
-        <input id="mealName" maxlength="120" placeholder="Например: Печени зеленчуци" required>
-      </label>
-      <label>Бележка (по желание)
-        <input id="mealNote" maxlength="250" placeholder="Например: да купя тиквички">
-      </label>
-      <div class="actions">
-        <button type="submit">Запази</button>
-        <button type="button" class="secondary" id="cancelAdd">Отказ</button>
-      </div>
-    </form>
-  </section>
 
   <section class="panel">
     <h2>🧺 План за седмицата</h2>
@@ -400,35 +382,7 @@ add.addEventListener("click", () => {
     }
   }
 
-  function openForm(date, meal) {
-    editingId = meal ? meal.id : null;
-    $("formTitle").textContent = meal ? "Редактирай запис" : "Добави ястие или събитие";
-    $("mealDate").value = date;
-    $("mealName").value = meal ? meal.name : "";
-    $("mealNote").value = meal ? meal.note : "";
-    $("addPanel").hidden = false;
-    $("addPanel").scrollIntoView({ behavior: "smooth", block: "start" });
-    $("mealName").focus();
-  }
 
-  $("mealForm").addEventListener("submit", event => {
-    event.preventDefault();
-    const date = $("mealDate").value;
-    const name = $("mealName").value.trim();
-    const note = $("mealNote").value.trim();
-    if (!date || !name) return;
-
-    if (editingId) {
-      const item = meals.find(m => m.id === editingId);
-      if (item) Object.assign(item, { date, name, note });
-    } else {
-      meals.push({
-        id: (window.crypto && crypto.randomUUID)
-          ? crypto.randomUUID()
-          : String(Date.now()) + Math.random().toString(16).slice(2),
-        date, name, note
-      });
-    }
 
     if (save()) {
       weekStart = mondayOf(parseDate(date));
@@ -439,10 +393,7 @@ add.addEventListener("click", () => {
     }
   });
 
-  $("cancelAdd").addEventListener("click", () => {
-    $("addPanel").hidden = true;
-    editingId = null;
-  });
+
 
   $("prevWeek").addEventListener("click", () => {
     weekStart = addDays(weekStart, -7);

@@ -227,26 +227,63 @@ body {
 
   <footer>Моята кухня · Твоят личен кулинарен помощник</footer>
 
+
 <script>
 (function () {
-  const $ = id => document.getElementById(id);
-  const storageKey = "moja-kuhnia-meals-v1";
-  let meals = [];
-  let weekStart = mondayOf(new Date());
-  let editingId = null;
+  "use strict";
 
-  try {
-    const saved = JSON.parse(localStorage.getItem(storageKey) || "[]");
-    if (Array.isArray(saved)) meals = saved;
-  } catch (e) {
-    meals = [];
+  // ===== Основни настройки и запазени данни =====
+  const $ = id => document.getElementById(id);
+
+  const MEALS_KEY = "moja-kuhnia-meals-v1";
+  const RECIPES_KEY = "moja-kuhnia-recipes-v1";
+
+  function makeId() {
+    return (window.crypto && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : String(Date.now()) + Math.random().toString(16).slice(2);
   }
 
+  function loadArray(key) {
+    try {
+      const value = JSON.parse(localStorage.getItem(key) || "[]");
+      return Array.isArray(value) ? value : [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  let meals = loadArray(MEALS_KEY);
+  let recipes = loadArray(RECIPES_KEY);
+  let editingRecipeId = null;
+  let weekStart = mondayOf(new Date());
+
+  function saveMeals() {
+    try {
+      localStorage.setItem(MEALS_KEY, JSON.stringify(meals));
+      return true;
+    } catch (error) {
+      alert("Не успях да запазя плана. Провери свободното място в браузъра.");
+      return false;
+    }
+  }
+
+  function saveRecipes() {
+    try {
+      localStorage.setItem(RECIPES_KEY, JSON.stringify(recipes));
+      return true;
+    } catch (error) {
+      alert("Не успях да запазя рецептата. Опитай със снимка с по-малък размер.");
+      return false;
+    }
+  }
+
+  // ===== Работа с датите =====
   function dateKey(date) {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
   }
 
   function parseDate(key) {
@@ -261,240 +298,240 @@ body {
   }
 
   function mondayOf(date) {
-    const result = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12);
+    const result = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      12
+    );
     const day = (result.getDay() + 6) % 7;
     result.setDate(result.getDate() - day);
     return result;
   }
 
-  function save() {
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(meals));
-      return true;
-    } catch (e) {
-      alert("Не успях да запазя данните. Провери свободното място в браузъра.");
-      return false;
-    }
-  }
-
   function formatDate(date) {
     return date.toLocaleDateString("bg-BG", {
-      day: "numeric", month: "short"
+      day: "numeric",
+      month: "short"
     });
   }
 
-  function safeText(tag, text, className) {
-    const el = document.createElement(tag);
-    el.textContent = text;
-    if (className) el.className = className;
-    return el;
+  function safeText(tag, value, className) {
+    const element = document.createElement(tag);
+    element.textContent = value;
+    if (className) element.className = className;
+    return element;
   }
 
-  function render() {
-    const last = addDays(weekStart, 6);
-    $("weekLabel").textContent =
-      `${formatDate(weekStart)} – ${formatDate(last)} ${last.getFullYear()}`;
-
+  // ===== Седмичен план =====
+  function renderPlan() {
     const grid = $("weekGrid");
+    const label = $("weekLabel");
+
+    if (!grid || !label) return;
+
+    const lastDay = addDays(weekStart, 6);
+    label.textContent =
+      `${formatDate(weekStart)} – ${formatDate(lastDay)} ${lastDay.getFullYear()}`;
+
     grid.replaceChildren();
 
-    const names = [
-      "Понеделник", "Вторник", "Сряда", "Четвъртък",
-      "Петък", "Събота", "Неделя"
+    const dayNames = [
+      "Понеделник",
+      "Вторник",
+      "Сряда",
+      "Четвъртък",
+      "Петък",
+      "Събота",
+      "Неделя"
     ];
+
     const today = dateKey(new Date());
 
     for (let i = 0; i < 7; i++) {
       const date = addDays(weekStart, i);
       const key = dateKey(date);
       const day = safeText("article", "", "day");
+
       if (key === today) day.classList.add("today");
 
-      const heading = safeText("h3", names[i]);
-      const dateText = safeText("div", formatDate(date), "date");
-      day.append(heading, dateText);
+      day.append(
+        safeText("h3", dayNames[i]),
+        safeText("div", formatDate(date), "date")
+      );
 
-      meals.filter(m => m.date === key).forEach(meal => {
+      // Показване на записаните ястия за деня
+      meals.filter(meal => meal.date === key).forEach(meal => {
         const card = safeText("div", "", "meal");
-        if (meal.note) card.append(safeText("small", meal.note));
+
+        if (meal.note) {
+          card.append(safeText("small", meal.note));
+        }
+
         card.append(safeText("div", meal.name));
 
         const remove = safeText("button", "Изтрий", "delete");
         remove.type = "button";
+
         remove.addEventListener("click", () => {
-          if (confirm(`Да изтрия ли „${meal.name}“?`)) {
-            meals = meals.filter(m => m.id !== meal.id);
-            if (save()) render();
+          if (!confirm(`Да изтрия ли „${meal.name}“ от плана?`)) return;
+
+          const oldMeals = meals;
+          meals = meals.filter(item => item.id !== meal.id);
+
+          if (saveMeals()) {
+            renderPlan();
+          } else {
+            meals = oldMeals;
           }
         });
+
         card.append(remove);
         day.append(card);
       });
 
-      const add = safeText("button", "+ Добави", "add");
-      add.type = "button";
+      // Бутон за избор само от запазените рецепти
+      const addButton = safeText("button", "+ Добави", "add");
+      addButton.type = "button";
 
-add.addEventListener("click", () => {
-  const chooser = document.createElement("div");
-  chooser.className = "meal";
-  chooser.append(safeText("strong", "Избери рецепта:"));
+      addButton.addEventListener("click", () => {
+        const oldChooser = day.querySelector(".recipe-chooser");
+        if (oldChooser) oldChooser.remove();
 
-  if (recipes.length) {
-    recipes.forEach(recipe => {
-      const pick = safeText("button", recipe.name, "secondary");
-      pick.type = "button";
-      pick.style.display = "block";
-      pick.style.width = "100%";
-      pick.style.marginTop = "8px";
+        const chooser = safeText("div", "", "meal");
+        chooser.classList.add("recipe-chooser");
+        chooser.append(safeText("strong", "Избери запазена рецепта:"));
 
-      pick.addEventListener("click", () => {
-        meals.push({
-          id: (window.crypto && crypto.randomUUID)
-            ? crypto.randomUUID()
-            : String(Date.now()) + Math.random().toString(16).slice(2),
-          date: key,
-          name: recipe.name,
-          note: "От Моите рецепти"
-        });
+        if (recipes.length === 0) {
+          chooser.append(
+            safeText("p", "Все още нямаш рецепти. Добави рецепта в страницата „Рецепти“.")
+          );
+        } else {
+          recipes.forEach(recipe => {
+            const pick = safeText("button", recipe.name, "secondary");
+            pick.type = "button";
+            pick.style.display = "block";
+            pick.style.width = "100%";
+            pick.style.marginTop = "8px";
 
-        if (save()) render();
+            pick.addEventListener("click", () => {
+              meals.push({
+                id: makeId(),
+                date: key,
+                name: recipe.name,
+                note: "От Моите рецепти"
+              });
+
+              if (saveMeals()) {
+                renderPlan();
+              }
+            });
+
+            chooser.append(pick);
+          });
+        }
+
+        const cancel = safeText("button", "Отказ", "secondary");
+        cancel.type = "button";
+        cancel.style.marginTop = "8px";
+        cancel.addEventListener("click", () => chooser.remove());
+
+        chooser.append(cancel);
+        day.append(chooser);
       });
 
-      chooser.append(pick);
-    });
-  } else {
-    chooser.append(safeText("p", "Още нямаш запазени рецепти."));
-  }
-
-
-
-  const cancel = safeText("button", "Отказ", "secondary");
-  cancel.type = "button";
-  cancel.style.marginTop = "8px";
-  cancel.addEventListener("click", () => chooser.remove());
-  chooser.append(cancel);
-
-  day.append(chooser);
-});
-
-      day.append(add);
+      day.append(addButton);
       grid.append(day);
     }
   }
 
-  $("prevWeek").addEventListener("click", () => {
-    weekStart = addDays(weekStart, -7);
-    render();
-  });
+  // ===== Навигация =====
+  function showPage(page) {
+    const home = $("homePage");
+    const plan = $("planPage");
+    const recipesPanel = $("recipesPanel");
 
-  $("nextWeek").addEventListener("click", () => {
-    weekStart = addDays(weekStart, 7);
-    render();
-  });
-
-  $("thisWeek").addEventListener("click", () => {
-    weekStart = mondayOf(new Date());
-    render();
-  });
-
-  $("copyWeek").addEventListener("click", () => {
-    const sourceStart = addDays(weekStart, -7);
-    const sourceKeys = Array.from({ length: 7 }, (_, i) =>
-      dateKey(addDays(sourceStart, i))
-    );
-    const previousMeals = meals.filter(m => sourceKeys.includes(m.date));
-
-    if (!previousMeals.length) {
-      alert("В предишната седмица няма записи за копиране.");
+    if (!home || !plan || !recipesPanel) {
+      console.error("Липсва HTML секция за една от страниците.");
       return;
     }
 
-    if (!confirm(`Да копирам ли ${previousMeals.length} записа от предишната седмица?`)) return;
+    home.hidden = page !== "home";
+    plan.hidden = page !== "plan";
+    recipesPanel.hidden = page !== "recipes" && page !== "favorites";
 
-    previousMeals.forEach(m => {
-      const newDate = dateKey(addDays(parseDate(m.date), 7));
-      meals.push({
-        ...m,
-        id: (window.crypto && crypto.randomUUID)
-          ? crypto.randomUUID()
-          : String(Date.now()) + Math.random().toString(16).slice(2),
-        date: newDate
-      });
+    document.querySelectorAll(".app-nav button").forEach(button => {
+      button.classList.toggle("active", button.dataset.page === page);
     });
 
-    if (save()) render();
-  });
-
-  $("exportData").addEventListener("click", () => {
-    const blob = new Blob(
-      [JSON.stringify({ meals }, null, 2)],
-      { type: "application/json;charset=utf-8" }
-    );
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "moja-kuhnia-rezervno-kopie.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  });
-
-  
-  // ===== Моите рецепти =====
-  const recipeStorageKey = "moja-kuhnia-recipes-v1";
-  let recipes = [];
-  let editingRecipeId = null;
-
-  try {
-    const storedRecipes = JSON.parse(
-      localStorage.getItem(recipeStorageKey) || "[]"
-    );
-    if (Array.isArray(storedRecipes)) recipes = storedRecipes;
-  } catch (e) {
-    recipes = [];
-  }
-
-  function saveRecipes() {
-    try {
-      localStorage.setItem(recipeStorageKey, JSON.stringify(recipes));
-      return true;
-    } catch (e) {
-      alert("Не успях да запазя рецептата. Опитай със снимка с по-малък размер.");
-      return false;
+    if (page === "recipes" || page === "favorites") {
+      renderRecipes();
     }
+
+    window.scrollTo(0, 0);
   }
 
+  document.querySelectorAll(".app-nav button").forEach(button => {
+    button.addEventListener("click", () => {
+      showPage(button.dataset.page);
+    });
+  });
+
+  // ===== Създаване на началната страница =====
+  if (!$("homePage")) {
+    const homePage = document.createElement("section");
+    homePage.className = "panel app-page";
+    homePage.id = "homePage";
+    homePage.innerHTML = `
+      <h2>🏡 Добре дошла в Моята кухня!</h2>
+      <p>Тук можеш да съхраняваш любимите си рецепти и да планираш храненето за седмицата.</p>
+      <p>🍲 Рецепти — добавяй продукти, начин на приготвяне и снимки.</p>
+      <p>📅 План — избирай запазени рецепти за всеки ден.</p>
+      <p>💚 Любими — събирай рецептите, които харесваш най-много.</p>
+    `;
+
+    const main = document.querySelector("main");
+    if (main) main.prepend(homePage);
+  }
+
+  // ===== Рецепти и любими =====
   function renderRecipes() {
-    const list = document.getElementById("recipeList");
-    const search = document.getElementById("recipeSearch");
+    const list = $("recipeList");
+    const search = $("recipeSearch");
+
     if (!list || !search) return;
 
     list.replaceChildren();
+
     const query = search.value.trim().toLocaleLowerCase("bg");
-  const favoritesOnly =
-  document.querySelector('.app-nav button.active')?.dataset.page === "favorites";
+    const favoritesOnly =
+      document.querySelector('.app-nav button.active')?.dataset.page === "favorites";
 
-const visible = recipes.filter(recipe =>
-  recipe.name.toLocaleLowerCase("bg").includes(query) &&
-  (!favoritesOnly || recipe.favorite)
-);
+    const visibleRecipes = recipes.filter(recipe => {
+      const name = String(recipe.name || "").toLocaleLowerCase("bg");
+      return name.includes(query) && (!favoritesOnly || recipe.favorite === true);
+    });
 
-    if (!visible.length) {
-      const message = document.createElement("p");
-      message.textContent = recipes.length
-        ? "Няма намерени рецепти."
-        : "Тук ще се показват твоите рецепти. Добави първата си рецепта от формуляра.";
+    if (visibleRecipes.length === 0) {
+      const message = safeText(
+        "p",
+        favoritesOnly
+          ? "Все още нямаш рецепти в Любими."
+          : recipes.length
+            ? "Няма намерени рецепти."
+            : "Тук ще се показват твоите рецепти. Добави първата си рецепта от формуляра."
+      );
       list.append(message);
       return;
     }
 
-    visible.forEach(recipe => {
-      const card = document.createElement("article");
-      card.className = "day";
+    visibleRecipes.forEach(recipe => {
+      const card = safeText("article", "", "day");
 
       if (recipe.photo) {
         const image = document.createElement("img");
         image.src = recipe.photo;
-        image.alt = recipe.name;
+        image.alt = recipe.name || "Снимка на рецепта";
         image.style.width = "100%";
         image.style.aspectRatio = "4 / 3";
         image.style.objectFit = "cover";
@@ -502,123 +539,110 @@ const visible = recipes.filter(recipe =>
         card.append(image);
       }
 
-      const title = document.createElement("h3");
-      title.textContent = recipe.name;
-      card.append(title);
+      card.append(safeText("h3", recipe.name || "Без име"));
 
-      const favorite = document.createElement("button");
-      favorite.className = "secondary";
-      favorite.type = "button";
-      favorite.textContent = recipe.favorite ? "★ Любима" : "☆ Добави в любими";
-      favorite.style.marginTop = "8px";
-      favorite.addEventListener("click", () => {
+      const favoriteButton = safeText(
+        "button",
+        recipe.favorite ? "★ Любима" : "☆ Добави в любими",
+        "secondary"
+      );
+      favoriteButton.type = "button";
+      favoriteButton.style.marginTop = "8px";
+
+      favoriteButton.addEventListener("click", () => {
+        const oldValue = recipe.favorite;
         recipe.favorite = !recipe.favorite;
-        if (saveRecipes()) renderRecipes();
+
+        if (saveRecipes()) {
+          renderRecipes();
+        } else {
+          recipe.favorite = oldValue;
+        }
       });
-      card.append(favorite);
+
+      card.append(favoriteButton);
 
       const details = document.createElement("details");
       details.style.marginTop = "10px";
 
-      const summary = document.createElement("summary");
-      summary.textContent = "Продукти и приготвяне";
-      details.append(summary);
+      details.append(safeText("summary", "Продукти и приготвяне"));
+      details.append(safeText("h4", "Продукти"));
 
-      const ingredientsHeading = document.createElement("h4");
-      ingredientsHeading.textContent = "Продукти";
-      details.append(ingredientsHeading);
-
-      const ingredients = document.createElement("p");
+      const ingredients = safeText("p", recipe.ingredients || "");
       ingredients.style.whiteSpace = "pre-wrap";
-      ingredients.textContent = recipe.ingredients;
       details.append(ingredients);
 
-      const stepsHeading = document.createElement("h4");
-      stepsHeading.textContent = "Начин на приготвяне";
-      details.append(stepsHeading);
+      details.append(safeText("h4", "Начин на приготвяне"));
 
-      const steps = document.createElement("p");
+      const steps = safeText("p", recipe.steps || "");
       steps.style.whiteSpace = "pre-wrap";
-      steps.textContent = recipe.steps;
       details.append(steps);
+
       card.append(details);
 
       const actions = document.createElement("div");
       actions.className = "actions";
       actions.style.marginTop = "10px";
 
-      const addToPlan = document.createElement("button");
+      const addToPlan = safeText("button", "📅 Отвори плана");
       addToPlan.type = "button";
-      addToPlan.textContent = "📅 Към плана";
       addToPlan.addEventListener("click", () => {
-        const date = prompt(
-          "За кой ден? Въведи дата във формат ГГГГ-ММ-ДД",
-          dateKey(new Date())
-        );
-        if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-          if (date) alert("Моля, въведи датата във формат ГГГГ-ММ-ДД.");
-          return;
-        }
-        meals.push({
-          id: (window.crypto && crypto.randomUUID)
-            ? crypto.randomUUID()
-            : String(Date.now()) + Math.random().toString(16).slice(2),
-          date,
-          name: recipe.name,
-          note: "От Моите рецепти"
-        });
-        if (save()) {
-          weekStart = mondayOf(parseDate(date));
-          render();
-          alert("Рецептата е добавена към седмичния план.");
-        }
+        showPage("plan");
       });
       actions.append(addToPlan);
 
-      const edit = document.createElement("button");
+      const edit = safeText("button", "Редактирай", "secondary");
       edit.type = "button";
-      edit.className = "secondary";
-      edit.textContent = "Редактирай";
+
       edit.addEventListener("click", () => {
         editingRecipeId = recipe.id;
-        document.getElementById("recipeFormTitle").textContent = "Редактирай рецепта";
-        document.getElementById("recipeName").value = recipe.name;
-        document.getElementById("recipeIngredients").value = recipe.ingredients;
-        document.getElementById("recipeSteps").value = recipe.steps;
-        document.getElementById("recipePhoto").value = "";
-        document.getElementById("cancelRecipe").hidden = false;
-        document.getElementById("recipeForm").scrollIntoView({ behavior: "smooth" });
+
+        $("recipeFormTitle").textContent = "Редактирай рецепта";
+        $("recipeName").value = recipe.name || "";
+        $("recipeIngredients").value = recipe.ingredients || "";
+        $("recipeSteps").value = recipe.steps || "";
+        $("recipePhoto").value = "";
+        $("cancelRecipe").hidden = false;
+
+        $("recipeForm").scrollIntoView({
+          behavior: "smooth",
+          block: "start"
+        });
       });
+
       actions.append(edit);
 
-      const remove = document.createElement("button");
+      const remove = safeText("button", "Изтрий", "delete");
       remove.type = "button";
-      remove.className = "delete";
-      remove.textContent = "Изтрий";
+
       remove.addEventListener("click", () => {
-        if (confirm(`Да изтрия ли рецептата „${recipe.name}“?`)) {
-          recipes = recipes.filter(item => item.id !== recipe.id);
-          if (saveRecipes()) renderRecipes();
+        if (!confirm(`Да изтрия ли рецептата „${recipe.name}“?`)) return;
+
+        const oldRecipes = recipes;
+        recipes = recipes.filter(item => item.id !== recipe.id);
+
+        if (saveRecipes()) {
+          renderRecipes();
+          renderPlan();
+        } else {
+          recipes = oldRecipes;
         }
       });
-      actions.append(remove);
 
+      actions.append(remove);
       card.append(actions);
       list.append(card);
     });
   }
 
-  document.getElementById("recipeSearch").addEventListener(
-    "input", renderRecipes
-  );
-
-  document.getElementById("recipeForm").addEventListener("submit", async event => {
+  // ===== Запазване на нова рецепта или редакция =====
+  $("recipeForm").addEventListener("submit", async event => {
     event.preventDefault();
 
-    const name = document.getElementById("recipeName").value.trim();
-    const ingredients = document.getElementById("recipeIngredients").value.trim();
-    const steps = document.getElementById("recipeSteps").value.trim();
-    const photoInput = document.getElementById("recipePhoto");
+    const name = $("recipeName").value.trim();
+    const ingredients = $("recipeIngredients").value.trim();
+    const steps = $("recipeSteps").value.trim();
+    const photoInput = $("recipePhoto");
     const file = photoInput.files[0];
 
     if (!name || !ingredients || !steps) {
@@ -627,15 +651,18 @@ const visible = recipes.filter(recipe =>
     }
 
     let photo = "";
+
     if (file) {
       if (!file.type.startsWith("image/")) {
         alert("Моля, избери файл със снимка.");
         return;
       }
+
       if (file.size > 700 * 1024) {
         alert("Избери снимка до 700 KB, за да се запази в браузъра.");
         return;
       }
+
       try {
         photo = await new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -643,105 +670,140 @@ const visible = recipes.filter(recipe =>
           reader.onerror = reject;
           reader.readAsDataURL(file);
         });
-      } catch (e) {
+      } catch (error) {
         alert("Не успях да прочета снимката.");
         return;
       }
     }
 
     const existing = editingRecipeId
-      ? recipes.find(recipe => recipe.id === editingRecipeId)
+      ? recipes.find(item => item.id === editingRecipeId)
       : null;
 
     const recipe = {
-      id: existing ? existing.id :
-        ((window.crypto && crypto.randomUUID)
-          ? crypto.randomUUID()
-          : String(Date.now()) + Math.random().toString(16).slice(2)),
+      id: existing ? existing.id : makeId(),
       name,
       ingredients,
       steps,
       photo: photo || (existing ? existing.photo : ""),
-      favorite: existing ? existing.favorite : false
+      favorite: existing ? existing.favorite === true : false
     };
 
+    const oldRecipes = recipes;
+
     if (existing) {
-      recipes = recipes.map(item => item.id === existing.id ? recipe : item);
+      recipes = recipes.map(item =>
+        item.id === existing.id ? recipe : item
+      );
     } else {
       recipes.unshift(recipe);
     }
 
     if (saveRecipes()) {
-      document.getElementById("recipeForm").reset();
-      document.getElementById("recipeFormTitle").textContent = "Добави нова рецепта";
-      document.getElementById("cancelRecipe").hidden = true;
+      $("recipeForm").reset();
+      $("recipeFormTitle").textContent = "Добави нова рецепта";
+      $("cancelRecipe").hidden = true;
       editingRecipeId = null;
+
       renderRecipes();
       alert("Рецептата е запазена!");
+    } else {
+      recipes = oldRecipes;
     }
   });
 
-  document.getElementById("cancelRecipe").addEventListener("click", () => {
+  $("cancelRecipe").addEventListener("click", () => {
     editingRecipeId = null;
-    document.getElementById("recipeForm").reset();
-    document.getElementById("recipeFormTitle").textContent = "Добави нова рецепта";
-    document.getElementById("cancelRecipe").hidden = true;
+    $("recipeForm").reset();
+    $("recipeFormTitle").textContent = "Добави нова рецепта";
+    $("cancelRecipe").hidden = true;
   });
 
+  $("recipeSearch").addEventListener("input", renderRecipes);
 
-  // Долна навигация
-
-function showPage(page) {
-  const home = document.getElementById("homePage");
-  const plan = document.getElementById("planPage");
-  const recipesPanel = document.getElementById("recipesPanel");
-  const addPanel = document.getElementById("addPanel");
-
-  if (!home || !plan || !recipesPanel) {
-    alert("Липсва секция на страница. Трябва да проверим HTML кода.");
-    return;
-  }
-
-  home.hidden = page !== "home";
-  plan.hidden = page !== "plan";
-  recipesPanel.hidden = page !== "recipes" && page !== "favorites";
-
-  if (addPanel) addPanel.hidden = true;
-
-  document.querySelectorAll(".app-nav button").forEach(button => {
-    button.classList.toggle("active", button.dataset.page === page);
+  // ===== Бутони на седмичния календар =====
+  $("prevWeek").addEventListener("click", () => {
+    weekStart = addDays(weekStart, -7);
+    renderPlan();
   });
 
-  if (page === "recipes" || page === "favorites") {
-    renderRecipes();
-  }
-
-  window.scrollTo(0, 0);
-}
-const navButtons = document.querySelectorAll(".app-nav button");
-
-navButtons.forEach(button => {
-  button.addEventListener("click", () => {
-    showPage(button.dataset.page);
+  $("nextWeek").addEventListener("click", () => {
+    weekStart = addDays(weekStart, 7);
+    renderPlan();
   });
-});
-  const homePage = document.createElement("section");
-  homePage.className = "panel app-page";
-  homePage.id = "homePage";
-  homePage.innerHTML = `
-    <h2>🏡 Добре дошла в Моята кухня!</h2>
-    <p>Тук можеш да съхраняваш любимите си рецепти и да планираш храненето за седмицата.</p>
-    <p>🍲 Рецепти — добавяй продукти, начин на приготвяне и снимки.</p>
-    <p>📅 План — избирай запазени рецепти за всеки ден.</p>
-    <p>💚 Любими — събирай рецептите, които харесваш най-много.</p>
-  `;
-  document.querySelector("main").prepend(homePage);
 
+  $("thisWeek").addEventListener("click", () => {
+    weekStart = mondayOf(new Date());
+    renderPlan();
+  });
+
+  // ===== Копиране на предишната седмица =====
+  $("copyWeek").addEventListener("click", () => {
+    const previousStart = addDays(weekStart, -7);
+    const previousKeys = Array.from({ length: 7 }, (_, index) =>
+      dateKey(addDays(previousStart, index))
+    );
+
+    const previousMeals = meals.filter(meal =>
+      previousKeys.includes(meal.date)
+    );
+
+    if (previousMeals.length === 0) {
+      alert("В предишната седмица няма записи за копиране.");
+      return;
+    }
+
+    if (!confirm(
+      `Да копирам ли ${previousMeals.length} записа от предишната седмица?`
+    )) return;
+
+    const oldMeals = meals;
+
+    const copiedMeals = previousMeals.map(meal => ({
+      ...meal,
+      id: makeId(),
+      date: dateKey(addDays(parseDate(meal.date), 7))
+    }));
+
+    meals = meals.concat(copiedMeals);
+
+    if (saveMeals()) {
+      renderPlan();
+      alert("Предишната седмица е копирана.");
+    } else {
+      meals = oldMeals;
+    }
+  });
+
+  // ===== Резервно копие на рецепти и план =====
+  $("exportData").addEventListener("click", () => {
+    const backup = {
+      meals,
+      recipes,
+      exportedAt: new Date().toISOString()
+    };
+
+    const blob = new Blob(
+      [JSON.stringify(backup, null, 2)],
+      { type: "application/json;charset=utf-8" }
+    );
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "moja-kuhnia-rezervno-kopie.json";
+    link.click();
+
+    URL.revokeObjectURL(url);
+  });
+
+  // ===== Начално показване =====
+  renderPlan();
   renderRecipes();
-  render();
   showPage("home");
-})();
 
+})();
 </script>
 </body>
 </html>

@@ -532,9 +532,13 @@ add.addEventListener("click", () => {
 
     list.replaceChildren();
     const query = search.value.trim().toLocaleLowerCase("bg");
-    const visible = recipes.filter(recipe =>
-      recipe.name.toLocaleLowerCase("bg").includes(query)
-    );
+  const favoritesOnly =
+  document.querySelector('.app-nav button.active')?.dataset.page === "favorites";
+
+const visible = recipes.filter(recipe =>
+  recipe.name.toLocaleLowerCase("bg").includes(query) &&
+  (!favoritesOnly || recipe.favorite)
+);
 
     if (!visible.length) {
       const message = document.createElement("p");
